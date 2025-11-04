@@ -1,5 +1,7 @@
-# BIO-MORF
+# Проект BIO-MORF
 ```
 cd ./ws/src/
-make
+
+bash build_sim.sh
+./FishSimulation
 ```
