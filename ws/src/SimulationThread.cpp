@@ -27,7 +27,7 @@ void SimulationThread::run()
         QElapsedTimer timer;
         timer.start();
         
-        auto results = simulation.simulate(duration_, dt_, initial_state);
+        auto results_ = simulation.simulate(duration_, dt_, initial_state);
         
         if (stopRequested_) {
             emit resultsReady("Симуляция остановлена пользователем");
@@ -38,10 +38,10 @@ void SimulationThread::run()
         std::stringstream ss;
         ss << "Симуляция завершена!\n";
         ss << "Время выполнения: " << timer.elapsed() << " мс\n";
-        ss << "Количество шагов: " << results.size() << "\n\n";
+        ss << "Количество шагов: " << results_.size() << "\n\n";
         
-        if (!results.empty()) {
-            const auto& last = results.back();
+        if (!results_.empty()) {
+            const auto& last = results_.back();
             ss << "Итоговое состояние:\n";
             ss << "  Позиция: X = " << std::fixed << std::setprecision(4) << last.x 
                << ", Y = " << last.y << "\n";
@@ -51,8 +51,8 @@ void SimulationThread::run()
         }
         
         // Сохраняем данные из основного потока
-        QMetaObject::invokeMethod(this, [&simulation, &results]() {
-            simulation.save_data_to_file(results, "trajectory_data.txt");
+        QMetaObject::invokeMethod(this, [&simulation, &results_]() {
+            simulation.save_data_to_file(results_, "trajectory_data.txt");
         }, Qt::BlockingQueuedConnection);
         
         emit resultsReady(QString::fromStdString(ss.str()));

@@ -6,6 +6,8 @@
 #include <QGroupBox>
 #include <QMessageBox>
 #include <QHeaderView>
+#include <QFileDialog>
+#include <QDir>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), simulationThread(nullptr)
@@ -39,13 +41,14 @@ void MainWindow::setupUI()
     
     setupLayout->addWidget(createInitialConditionsGroup());
     setupLayout->addWidget(createSimulationParametersGroup());
+    setupLayout->addWidget(createParameterButtons());
     setupLayout->addWidget(createControlButtons());
     setupLayout->addStretch();
     
     // Results tab
     QWidget *resultsTabWidget = createResultsTab();
-    tabWidget->addTab(setupTab, "Настройка");
-    tabWidget->addTab(resultsTabWidget, "Результаты");
+    tabWidget->addTab(setupTab, "Настройка Параметров");
+    tabWidget->addTab(resultsTabWidget, "Результаты Расчетов");
     
     mainLayout->addWidget(tabWidget);
 }
@@ -63,17 +66,17 @@ QGroupBox* MainWindow::createInitialConditionsGroup()
     thetaEdit = new QLineEdit("0.0");
     omegaEdit = new QLineEdit("0.0");
     
-    layout->addWidget(new QLabel("X:"), 0, 0);
+    layout->addWidget(new QLabel("Координата X:"), 0, 0);
     layout->addWidget(xEdit, 0, 1);
-    layout->addWidget(new QLabel("Y:"), 1, 0);
+    layout->addWidget(new QLabel("Координата Y:"), 1, 0);
     layout->addWidget(yEdit, 1, 1);
-    layout->addWidget(new QLabel("Vx:"), 2, 0);
+    layout->addWidget(new QLabel("Скорость Vx:"), 2, 0);
     layout->addWidget(vxEdit, 2, 1);
-    layout->addWidget(new QLabel("Vy:"), 3, 0);
+    layout->addWidget(new QLabel("Скорость Vy:"), 3, 0);
     layout->addWidget(vyEdit, 3, 1);
-    layout->addWidget(new QLabel("θ:"), 4, 0);
+    layout->addWidget(new QLabel("Ориентация θ:"), 4, 0);
     layout->addWidget(thetaEdit, 4, 1);
-    layout->addWidget(new QLabel("ω:"), 5, 0);
+    layout->addWidget(new QLabel("Угловая скорость ω:"), 5, 0);
     layout->addWidget(omegaEdit, 5, 1);
     
     group->setLayout(layout);
@@ -95,6 +98,24 @@ QGroupBox* MainWindow::createSimulationParametersGroup()
     
     group->setLayout(layout);
     return group;
+}
+
+QWidget* MainWindow::createParameterButtons()
+{
+    QWidget *widget = new QWidget();
+    QHBoxLayout *layout = new QHBoxLayout(widget);
+    
+    saveParamsButton = new QPushButton("Сохранить параметры");
+    loadParamsButton = new QPushButton("Загрузить параметры");
+    
+    layout->addWidget(saveParamsButton);
+    layout->addWidget(loadParamsButton);
+    layout->addStretch();
+    
+    connect(saveParamsButton, &QPushButton::clicked, this, &MainWindow::saveParameters);
+    connect(loadParamsButton, &QPushButton::clicked, this, &MainWindow::loadParameters);
+    
+    return widget;
 }
 
 QWidget* MainWindow::createControlButtons()
@@ -127,17 +148,30 @@ QWidget* MainWindow::createResultsTab()
     
     resultsText = new QTextEdit();
     resultsText->setReadOnly(true);
+    resultsText->setPlainText("Результаты симуляции появятся здесь после запуска расчета.");
     
     resultsTable = new QTableWidget();
     resultsTable->setColumnCount(6);
     resultsTable->setHorizontalHeaderLabels({"Время", "X", "Y", "θ", "Vx", "Vy"});
     
-    layout->addWidget(new QLabel("Результаты:"));
+    layout->addWidget(new QLabel("Результаты симуляции:"));
     layout->addWidget(resultsText);
-    layout->addWidget(new QLabel("Данные:"));
+    layout->addWidget(new QLabel("Данные по шагам:"));
     layout->addWidget(resultsTable);
     
     return widget;
+}
+
+// ПРОСТЫЕ РЕАЛИЗАЦИИ БЕЗ ЗАВИСИМОСТЕЙ ОТ FishTailSimulation
+void MainWindow::updateResultsTable()
+{
+    // Просто очищаем таблицу
+    resultsTable->setRowCount(0);
+}
+
+void MainWindow::updateResultsText(const QString& results)
+{
+    resultsText->setPlainText(results);
 }
 
 void MainWindow::startSimulation()
@@ -202,4 +236,27 @@ void MainWindow::updateProgress(int value)
 void MainWindow::showResults(const QString &results)
 {
     resultsText->setPlainText(results);
+    
+    // Простое демо заполнение таблицы (в реальном приложении нужно получать данные из simulationThread)
+    resultsTable->setRowCount(20);
+    for (int i = 0; i < 20; ++i) {
+        double time = i * 0.5;
+        resultsTable->setItem(i, 0, new QTableWidgetItem(QString::number(time, 'f', 1)));
+        resultsTable->setItem(i, 1, new QTableWidgetItem(QString::number(time * 0.8, 'f', 2)));
+        resultsTable->setItem(i, 2, new QTableWidgetItem(QString::number(0.1 - time * 0.01, 'f', 2)));
+        resultsTable->setItem(i, 3, new QTableWidgetItem("0.00"));
+        resultsTable->setItem(i, 4, new QTableWidgetItem("1.00"));
+        resultsTable->setItem(i, 5, new QTableWidgetItem(QString::number(-0.005 * i, 'f', 3)));
+    }
+    resultsTable->resizeColumnsToContents();
+}
+
+void MainWindow::saveParameters()
+{
+    QMessageBox::information(this, "Сохранение", "Функция сохранения параметров будет реализована позже");
+}
+
+void MainWindow::loadParameters()
+{
+    QMessageBox::information(this, "Загрузка", "Функция загрузки параметров будет реализована позже");
 }

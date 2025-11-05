@@ -12,9 +12,9 @@ private:
     double g = 9.81;        // ускорение свободного падения в кг мс2
     double p0 = 101325.0;   // атмосферное давление в Па
     
-    // Безразмерные параметры (как в вашей модели)
-    double Lambda = 0.0;
-    double m = 3; // масса
+    // Параметры АНПА
+    double Lambda = 1.5; // Коэффицент подъемной силы
+    double m = 3.0; // масса
     double I = 0.5; // момент инерции
     
     // Параметры тяги
@@ -29,9 +29,9 @@ private:
     double Fl = 0.0;
 
     // плечи сил
-    double ra = 0.0; // плечо архимедовой силы
-    double rmg = 0.0; // плечо силы тяжести
-    double rl = 0.0; // плечо подъемной силы
+    double ra = 0.2; // плечо архимедовой силы
+    double rmg = 0.1; // плечо силы тяжести
+    double rl = -0.3; // плечо подъемной силы
 
     // коэффициенты
     double ky = 1.0; // коэффициенты квадратичного демпфирования
@@ -42,11 +42,15 @@ private:
     double yeq = 1.0; // положительная - погружена, отрицательная - выше поверхности воды
     double u0 = 1.0;   // равновесная скорость
 
-    // нейтральная плавучесть
-    double V0 = m / rho;
+    // Нейтральная плавучесть
+    double V0 = 0.0;
+    double y_neutral = 0.0; // глубина статического равновесия
 
     double archimedes_force(double y) const;
     double thrust_force(double y, double theta) const;
+    double calculate_dynamic_equilibrium(double vx) const;
+    double lift_force(double vx) const;
+    double find_static_equilibrium_depth() const;
 
 
 public:
@@ -55,6 +59,8 @@ public:
       double time;
       State(double x=0, double y=0, double vx=0, double vy=0, double theta=0, double omega=0, double t=0);
   };
+  bool is_dynamically_stable(const FishTailSimulation::State& state, double tolerance = 0.01) const;
+
   FishTailSimulation();
   std::vector<double> equations_of_motion(double t, const std::vector<double>& state) const;
   std::vector<double> runge_kutta_4(double t, const std::vector<double>& state, double dt) const;
