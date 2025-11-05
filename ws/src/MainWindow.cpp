@@ -60,7 +60,7 @@ QGroupBox* MainWindow::createInitialConditionsGroup()
     
     // Create input fields with default values
     xEdit = new QLineEdit("0.0");
-    yEdit = new QLineEdit("0.1");
+    yEdit = new QLineEdit("-0.5");
     vxEdit = new QLineEdit("1.0");
     vyEdit = new QLineEdit("0.0");
     thetaEdit = new QLineEdit("0.0");

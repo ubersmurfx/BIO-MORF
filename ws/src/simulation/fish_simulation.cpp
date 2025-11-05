@@ -34,9 +34,8 @@ bool FishTailSimulation::is_dynamically_stable(const FishTailSimulation::State& 
 }
 
 double FishTailSimulation::thrust_force(double y, double theta) const {
-    double delta_y = y - yeq;
-    double result_thrust_force = Ft0 + Fy * delta_y + G * theta;
-    // std::cout << result_thrust_force << std::endl;
+    double delta_y = yeq - y;
+    double result_thrust_force = Ft0 - Fy * delta_y + G * theta;
     return result_thrust_force;
 }
 
@@ -59,9 +58,13 @@ std::vector<double> FishTailSimulation::equations_of_motion(double t, const std:
     // Уравнение для X (без изменений)
     double ax = (Ft * std::cos(theta)) / m - kx * vx * std::abs(vx);
     
-    std::cout << "t=" << t << " | Fa=" << Fa << " | mg=" << m*g << " | Fl=" << Fl 
-                  << " | Ft=" << Ft << " | ay=" << ay << std::endl;
+    // std::cout << "t=" << t << " | Fa=" << Fa << " | mg=" << m*g << " | Fl=" << Fl 
+    //               << " | Ft=" << Ft << " | ay=" << ay << std::endl;
 
+    std::cout << "CONTROL_DEBUG: y=" << y << ", yeq=" << yeq 
+              << ", delta_y=" << (y - yeq)
+              << ", thrust_correction=" << (Fy * (y - yeq))
+              << ", Ft=" << Ft << std::endl;
     
     // Вращательное движение
     double moment_archimedes = ra * Fa * std::cos(theta);
