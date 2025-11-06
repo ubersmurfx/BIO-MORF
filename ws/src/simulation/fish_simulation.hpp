@@ -9,50 +9,51 @@ class FishTailSimulation {
 private:
     // Физические параметры
     double rho = 1000.0;    // плотность воды в кг на м3
-    double g = 9.81;        // ускорение свободного падения в кг мс2
+    double g = 9.80665;        // ускорение свободного падения в м/с2
     double p0 = 101325.0;   // атмосферное давление в Па
-    
+    mutable double y_curr;
     // Параметры АНПА
-    double Lambda = 2.0; // Коэффицент подъемной силы
+    double Lambda = 1.5; // Коэффицент подъемной силы. Большая подъемная сила (хорошие плавники)
     double m = 3.0; // масса
     double I = 0.5; // момент инерции
     
     // Параметры тяги
-    double Ft0 = 2.0; // номинальная тяга
+    double Ft0 = 0.1; // номинальная тяга
     double Fy = 0.2; // коэффициент усиления по вертикали
     double G = 0.0; // коэффициент усиления по углу
     
     // статическая архимедова сила
     double Fa = 0.0;
 
-    // аэродинамическая подъемная сила
+    // аэродинамическая подъемная сила, H
     double Fl = 0.0;
 
-    // плечи сил
-    double ra = 0.2; // плечо архимедовой силы
-    double rmg = 0.1; // плечо силы тяжести
-    double rl = -0.3; // плечо подъемной силы
+    // плечи сил балансированный "нос вниз"
+    double ra = 0.05; // плечо архимедовой силы
+    double rmg = -0.06; // плечо силы тяжести
+    double rl = -0.25; // плечо подъемной силы
 
     // коэффициенты
     double ky = 1.0; // коэффициенты квадратичного демпфирования
-    double ktheta = 0.5;
+    double ktheta = 5;
     double kx = 2.0;    // крупный аппарат
 
     // эквивалентная глубина
-    double yeq = -1.0; //
+    double yeq = 0.344292;
     double u0 = 1.0;   // равновесная скорость
 
-    // Нейтральная плавучесть
-    double V0 = 0.0;
-    double y_neutral = 0.0; // глубина статического равновесия
+    double V0;
+
+    double y_neutral; // глубина статического равновесия или нулевой плавучести
 
     double archimedes_force(double y) const;
     double thrust_force(double y, double theta) const;
     double calculate_dynamic_equilibrium(double vx) const;
     double lift_force(double vx) const;
     double find_static_equilibrium_depth() const;
-
-
+    double adaptive_archimedes_force(double y, double vy) const;
+    mutable double adaptive_V0 = 0.00305;
+    
 public:
   struct State {
       double x, y, vx, vy, theta, omega;
@@ -73,4 +74,6 @@ public:
   void create_3d_gnuplot_script();
   void run_gnuplot();
   void print_simulation_results(const std::vector<FishTailSimulation::State>& results);
+  double calculate_critical_depth();
+  void check_initial_moment();
 };

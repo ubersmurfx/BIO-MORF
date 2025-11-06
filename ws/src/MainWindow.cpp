@@ -60,8 +60,8 @@ QGroupBox* MainWindow::createInitialConditionsGroup()
     
     // Create input fields with default values
     xEdit = new QLineEdit("0.0");
-    yEdit = new QLineEdit("-0.5");
-    vxEdit = new QLineEdit("1.0");
+    yEdit = new QLineEdit("0.4");
+    vxEdit = new QLineEdit("0.2");
     vyEdit = new QLineEdit("0.0");
     thetaEdit = new QLineEdit("0.0");
     omegaEdit = new QLineEdit("0.0");
@@ -88,7 +88,7 @@ QGroupBox* MainWindow::createSimulationParametersGroup()
     QGroupBox *group = new QGroupBox("Параметры симуляции");
     QGridLayout *layout = new QGridLayout;
     
-    durationEdit = new QLineEdit("20.0");
+    durationEdit = new QLineEdit("200.0");
     dtEdit = new QLineEdit("0.1");
     
     layout->addWidget(new QLabel("Длительность (с):"), 0, 0);

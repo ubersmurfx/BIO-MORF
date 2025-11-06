@@ -28,6 +28,7 @@ void SimulationThread::run()
         timer.start();
         
         auto results_ = simulation.simulate(duration_, dt_, initial_state);
+        simulation.run_gnuplot();
         
         if (stopRequested_) {
             emit resultsReady("Симуляция остановлена пользователем");
