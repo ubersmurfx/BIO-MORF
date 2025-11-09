@@ -1,63 +1,88 @@
-#include "fish_simulation.hpp"
+#include "simulation/fish_simulation.hpp"
 
 FishTailSimulation::State::State(double x, double y, double vx, double vy, 
                                 double theta, double omega, double t) 
     : x(x), y(y), vx(vx), vy(vy), theta(theta), omega(omega), time(t) {}
 
 
-FishTailSimulation::FishTailSimulation() {
-    V0 = 0.0032; // м3
-    
-    // Находим глубину неустойчивого статического равновесия
+FishTailSimulation::FishTailSimulation() : params(), adaptive_v0(params.v0) {
+    params.validate();
     y_neutral = find_static_equilibrium_depth();
     check_initial_moment();
-    
-    std::cout << "=== ПАРАМЕТРЫ ДЛЯ ДИНАМИЧЕСКОЙ СТАБИЛИЗАЦИИ ===" << std::endl;
-    std::cout << "Глубина статического равновесия: " << y_neutral << " м" << std::endl;
-    std::cout << "Плечо архимедовой силы (ra): " << ra << " м" << std::endl;
-    std::cout << "Плечо силы тяжести (rmg): " << rmg << " м" << std::endl;
-    std::cout << "Плечо подъемной силы (rl): " << rl << " м" << std::endl;
-    std::cout << "Коэффициент подъемной силы (Lambda): " << Lambda << std::endl;
-    std::cout << "=============================================" << std::endl;
+    print_parameters();
+}
+
+// Конструктор с параметрами
+FishTailSimulation::FishTailSimulation(const SimulationParameters& params) 
+    : params(params), adaptive_v0(params.v0) {
+    params.validate();
+    y_neutral = find_static_equilibrium_depth();
+    check_initial_moment();
+    print_parameters();
+}
+
+void FishTailSimulation::print_parameters() const {
+    std::cout << "=== Параметры симуляции АНПА ===" << std::endl;
+    std::cout << "Масса: " << params.mass << " кг" << std::endl;
+    std::cout << "Момент инерции: " << params.inertia << " кг·м²" << std::endl;
+    std::cout << "Тяга: " << params.thrust << " Н" << std::endl;
+    std::cout << "Коэффициент Fy: " << params.fY << std::endl;
+    std::cout << "Коэффициент G: " << params.g << std::endl;
+    std::cout << "Плечо Архимеда: " << params.ra << " м" << std::endl;
+    std::cout << "Плечо тяжести: " << params.rmg << " м" << std::endl;
+    std::cout << "Плечо подъемной силы: " << params.rl << " м" << std::endl;
+    std::cout << "Демпфирование: Kx=" << params.kx << ", Ky=" << params.ky << ", Kθ=" << params.ktheta << std::endl;
+    std::cout << "Равновесная глубина: " << params.yeq << " м" << std::endl;
+    std::cout << "Начальная скорость: " << params.u0 << " м/с" << std::endl;
+    std::cout << "Начальный объем: " << params.v0 << " м³" << std::endl;
+    std::cout << "Плотность воды: " << params.rho << " кг/м³" << std::endl;
+    std::cout << "Давление: " << params.p0 << " Па" << std::endl;
+    std::cout << "Длительность: " << params.duration << " с" << std::endl;
+    std::cout << "Шаг времени: " << params.dt << " с" << std::endl;
+    std::cout << "===============================" << std::endl;
+}
+
+void FishTailSimulation::setParameters(const SimulationParameters& new_params) {
+    new_params.validate();
+    params = new_params;
+    adaptive_v0 = params.v0;
+    y_neutral = find_static_equilibrium_depth();
 }
 
 double FishTailSimulation::archimedes_force(double y) const {
-    double volume_at_depth = V0 * (p0 / (p0 + rho * g * y)); // учет изменения объема
-    return rho * g * volume_at_depth; 
+    double volume_at_depth = params.v0 * (params.p0 / (params.p0 + params.rho * params.g * y));
+    return params.rho * params.g * volume_at_depth; 
 }
 
-bool FishTailSimulation::is_dynamically_stable(const FishTailSimulation::State& state, double tolerance) const {
+bool FishTailSimulation::is_dynamically_stable(const State& state, double tolerance) const {
     return (std::abs(state.vy) < tolerance && 
             std::abs(state.omega) < tolerance &&
             std::abs(state.theta) < 0.1);
 }
 
 double FishTailSimulation::thrust_force(double y, double theta) const {
-    double constrained_y = std::max(0.0, y); // Используем ограниченную координату
-    double delta_y = constrained_y - yeq;
-    double result_thrust_force = Ft0 - Fy * delta_y + G * theta;
+    double constrained_y = std::max(0.0, y);
+    double delta_y = constrained_y - params.yeq;
+    double result_thrust_force = params.thrust - params.fY * delta_y + params.g * theta;
     return result_thrust_force;
 }
-
 
 double FishTailSimulation::adaptive_archimedes_force(double y, double vy) const {
     double correction = 0.0;
     
-    if (y < yeq && vy < -0.01) { // Слишком быстро всплываем
+    if (y < params.yeq && vy < -0.01) {
         correction = -0.00001;
-        std::cout << "ADAPTIVE: Too fast ascent, decreasing buoyancy" << std::endl;
-    } else if (y > yeq && vy > 0.01) { // Слишком быстро тонем
-        correction = 0.00001; // Увеличиваем плавучесть  
-        std::cout << "ADAPTIVE: Too fast descent, increasing buoyancy" << std::endl;
+    } else if (y > params.yeq && vy > 0.01) {
+        correction = 0.00001;
     }
     
-    adaptive_V0 += correction;
-    adaptive_V0 = std::max(0.0029, std::min(0.0032, adaptive_V0));
+    adaptive_v0 += correction;
+    adaptive_v0 = std::max(0.0025, std::min(0.0035, adaptive_v0));
     
-    std::cout << "ADAPTIVE_DEBUG: V0=" << adaptive_V0 << " correction=" << correction 
-              << " y=" << y << " vy=" << vy << std::endl;
+    // std::cout << "ADAPTIVE_DEBUG: v0=" << adaptive_v0 << " correction=" << correction 
+    //           << " y=" << y << " vy=" << vy << std::endl;
     
-    return rho * g * adaptive_V0 * (p0 / (p0 + rho * g * y));
+    return params.rho * params.g * adaptive_v0 * (params.p0 / (params.p0 + params.rho * params.g * y));
 }
 
 std::vector<double> FishTailSimulation::equations_of_motion(double t, const std::vector<double>& state) const {
@@ -65,7 +90,8 @@ std::vector<double> FishTailSimulation::equations_of_motion(double t, const std:
     double vx = state[2], vy = state[3];
     double theta = state[4], omega = state[5];
     
-    double constrained_y = std::max(0.0, y); // Ограничиваем снизу нулем
+    double constrained_y = std::max(0.0, y);
+    
     // вычисление сил
     double Ft = thrust_force(constrained_y, theta);
     double Fa = adaptive_archimedes_force(constrained_y, vy);
@@ -77,34 +103,19 @@ std::vector<double> FishTailSimulation::equations_of_motion(double t, const std:
     Fl = std::max(0.0, std::min(1000.0, Fl));
 
     // Уравнения движения
-    // горизонтальное
-    double ax = ((Ft * std::cos(theta)) - kx * vx * std::abs(vx)) / m;
-    double ay = (- Fa + m*g - Fl - Ft * std::sin(theta) - ky * vy * std::abs(vy)) / m;
-    
+    double ax = ((Ft * std::cos(theta)) - params.kx * vx * std::abs(vx)) / params.mass;
+    double ay = (-Fa + params.mass * params.g - Fl - Ft * std::sin(theta) - 
+                params.ky * vy * std::abs(vy)) / params.mass;
 
     // Вращательное движение
-    double moment_archimedes = ra * Fa * std::cos(theta);
-    double moment_gravity = rmg * m * g * std::cos(theta);
-    double moment_lift = rl * Fl;
+    double moment_archimedes = params.ra * Fa * std::cos(theta);
+    double moment_gravity = params.rmg * params.mass * params.g * std::cos(theta);
+    double moment_lift = params.rl * Fl;
     
     double alpha = (moment_archimedes + moment_gravity + moment_lift - 
-                   ktheta * omega * std::abs(omega)) / I;
-    y_curr = y;
-
-    // std::cout << "CONTROL_DEBUG: y=" << constrained_y << ", yeq=" << yeq << " x " << x
-    //         << ", w " << omega
-    //           << ", delta_y=" << (constrained_y - yeq)
-    //           << " theta " << theta 
-    //           << ", thrust_correction=" << (Fy * (constrained_y - yeq))
-    //           << ", Ft=" << Ft << std::endl;
-
-    // std::cout << "ax: " << ax << ", ay=" << ay << std::endl;
+                   params.ktheta * omega * std::abs(omega)) / params.inertia;
     
-    // std::cout << "MOMENT_DEBUG: M_arch=" << moment_archimedes 
-    //       << ", M_grav=" << moment_gravity 
-    //       << ", M_lift=" << moment_lift
-    //       << ", M_total=" << (moment_archimedes + moment_gravity + moment_lift)
-    //       << ", alpha=" << alpha << std::endl;
+    y_curr = y;
 
     return {vx, vy, ax, ay, omega, alpha};
 }
@@ -173,33 +184,32 @@ std::vector<FishTailSimulation::State> FishTailSimulation::simulate(double durat
     return results;
 }
 
-
 double FishTailSimulation::lift_force(double vx) const {
-    return Lambda * vx * vx; // горизонтальная скорость^2 * Lamdba
+    return params.lambda * vx * vx;
 }
 
 // найти глубину нейтральной плавучести
 double FishTailSimulation::find_static_equilibrium_depth() const {
     double y_left = 0.0;
-    double y_right = 10.0; // Уменьшил диапазон
+    double y_right = 10.0;
     
     std::cout << "Поиск горизонта..." << std::endl;
     
     for (int i = 0; i < 50; ++i) {
         double y_mid = (y_left + y_right) / 2.0;
         double fa = archimedes_force(y_mid);
-        double error = fa - m*g;
+        double error = fa - params.mass * params.g;
+        
         if (std::abs(error) < 1e-8) {
             return y_mid;
         }
         
         if (error > 0) {
-            y_left = y_mid;  // Слишком много плавучести - идем глубже
+            y_left = y_mid;
         } else {
-            y_right = y_mid; // Слишком мало плавучести - идем выше 
+            y_right = y_mid;
         }
         
-        // Защита от зацикливания
         if (y_right - y_left < 1e-12) {
             std::cout << "Достигнута точность: " << y_mid << " м" << std::endl;
             return y_mid;
@@ -212,12 +222,8 @@ double FishTailSimulation::find_static_equilibrium_depth() const {
 }
 
 double FishTailSimulation::calculate_dynamic_equilibrium(double vx) const {
-    // Для динамического равновесия: m*g = Fa(y) + Fl(vx)
-    // Решаем уравнение: archimedes_force(y) = m*g - Lambda*vx*vx
+    double target_force = params.mass * params.g - lift_force(vx);
     
-    double target_force = m*g - lift_force(vx);
-    
-    // Используем метод бисекции
     double y_left = -10.0;
     double y_right = 10.0;
     
@@ -239,8 +245,19 @@ double FishTailSimulation::calculate_dynamic_equilibrium(double vx) const {
     return (y_left + y_right) / 2.0;
 }
 
-void FishTailSimulation::save_data_to_file(const std::vector<State>& results, 
-                      const std::string& filename) {
+double FishTailSimulation::calculate_critical_depth() const {
+    double v_max = 5.0;
+    double FL_max = params.lambda * v_max * v_max;
+    
+    double y_crit = (params.mass * params.g * params.p0 / 
+                    (params.rho * params.g * params.v0 * (params.mass * params.g - FL_max)) - 
+                    params.p0) / (params.rho * params.g);
+    
+    std::cout << "Теоретическая критическая глубина: " << y_crit << " м" << std::endl;
+    return y_crit;
+}
+
+void FishTailSimulation::save_data_to_file(const std::vector<State>& results, const std::string& filename) {
     std::ofstream file(filename);
     if (!file.is_open()) {
         std::cerr << "Error opening file: " << filename << std::endl;
@@ -349,25 +366,11 @@ void FishTailSimulation::print_simulation_results(const std::vector<State>& resu
     }
 }
 
-double FishTailSimulation::calculate_critical_depth() {
-    // Критическая глубина, где Fa(y) + FL_max = mg
-    // FL_max = Λ·v_max² (максимальная подъемная сила)
-    double v_max = 5.0; // Максимальная достижимая скорость
-    double FL_max = Lambda * v_max * v_max;
-    
-    // Решаем: ρgV₀(p₀/(p₀ + ρgy_crit)) = mg - FL_max
-    // => y_crit = (mg·p₀/(ρgV₀(mg - FL_max)) - p₀)/(ρg)
-    
-    double y_crit = (m*g*p0/(rho*g*V0*(m*g - FL_max)) - p0)/(rho*g);
-    
-    std::cout << "Теоретическая критическая глубина: " << y_crit << " м" << std::endl;
-    return y_crit;
-}
 
 void FishTailSimulation::check_initial_moment() {
-    double Fa = archimedes_force(y_curr);  // На горизонте
-    double M_arch = ra * Fa;
-    double M_grav = rmg * m * g;
+    double Fa = archimedes_force(y_curr);
+    double M_arch = params.ra * Fa;
+    double M_grav = params.rmg * params.mass * params.g;
     double total_M = M_arch + M_grav;
     
     std::cout << "Момент Архимеда: " << M_arch << " Н·м" << std::endl;

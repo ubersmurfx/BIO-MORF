@@ -1,66 +1,141 @@
 #include "SimulationThread.hpp"
-#include <QElapsedTimer>
-#include <sstream>
-#include <iomanip>
-#include <atomic>
-#include <iostream>
+#include <QMetaObject>
 
-SimulationThread::SimulationThread(double x, double y, double vx, double vy,
-                                 double theta, double omega, double duration, double dt,
-                                 QObject *parent)
-    : QThread(parent), x_(x), y_(y), vx_(vx), vy_(vy), theta_(theta), omega_(omega),
-      duration_(duration), dt_(dt), stopRequested_(false)
+SimulationThread::SimulationThread(const SimulationParameters& params, QObject* parent)
+    : QThread(parent), m_params(params), m_stopRequested(false)
 {
-}
-
-void SimulationThread::stopSimulation()
-{
-    stopRequested_ = true;
 }
 
 void SimulationThread::run()
 {
+    m_stopRequested = false;
+    
     try {
-        FishTailSimulation simulation;
-        FishTailSimulation::State initial_state(x_, y_, vx_, vy_, theta_, omega_, 0.0);
+        FishTailSimulation simulation(m_params);
+        FishTailSimulation::State initialState(
+            m_params.initX, m_params.initY, 
+            m_params.initVx, m_params.initVy,
+            m_params.initTheta, m_params.initOmega
+        );
         
-        QElapsedTimer timer;
-        timer.start();
+        auto results = simulation.simulate(m_params.duration, m_params.dt, initialState);
+        simulation.save_data_to_file(results, "trajectory_data.txt");
+        simulation.run_gnuplot(); 
         
-        auto results_ = simulation.simulate(duration_, dt_, initial_state);
-        simulation.run_gnuplot();
         
-        if (stopRequested_) {
-            emit resultsReady("Симуляция остановлена пользователем");
-            return;
+        int totalSteps = static_cast<int>(m_params.duration / m_params.dt);
+        for (int step = 0; step < totalSteps && !m_stopRequested; ++step) {
+            int progress = static_cast<int>((step * 100) / totalSteps);
+            emit progressUpdated(progress);
+            
+            msleep(1);
         }
         
-        // Prepare results text
-        std::stringstream ss;
-        ss << "Симуляция завершена!\n";
-        ss << "Время выполнения: " << timer.elapsed() << " мс\n";
-        ss << "Количество шагов: " << results_.size() << "\n\n";
-        
-        if (!results_.empty()) {
-            const auto& last = results_.back();
-            ss << "Итоговое состояние:\n";
-            ss << "  Позиция: X = " << std::fixed << std::setprecision(4) << last.x 
-               << ", Y = " << last.y << "\n";
-            ss << "  Скорость: Vx = " << last.vx << ", Vy = " << last.vy << "\n";
-            ss << "  Угол: θ = " << last.theta << " рад\n";
-            ss << "  Пройденное расстояние: " << std::sqrt(last.x*last.x + last.y*last.y) << "\n";
+        if (!m_stopRequested && !results.empty()) {
+            QString resultsText = processSimulationResults(results);
+            emit resultsReady(resultsText);
+            emit simulationFinished();
         }
-        
-        // Сохраняем данные из основного потока
-        QMetaObject::invokeMethod(this, [&simulation, &results_]() {
-            simulation.save_data_to_file(results_, "trajectory_data.txt");
-        }, Qt::BlockingQueuedConnection);
-        
-        emit resultsReady(QString::fromStdString(ss.str()));
-        
+
     } catch (const std::exception& e) {
-        emit simulationError(QString("Ошибка симуляции: %1").arg(e.what()));
-    } catch (...) {
-        emit simulationError("Неизвестная ошибка во время симуляции");
+        emit simulationError(QString("Simulation error: %1").arg(e.what()));
     }
+}
+
+QString SimulationThread::processSimulationResults(const std::vector<FishTailSimulation::State>& results)
+{
+    if (results.empty()) {
+        return "Симуляция не дала результатов";
+    }
+    
+    const auto& finalState = results.back();
+    
+    // Анализ результатов
+    double maxDepth = 0;
+    double maxSpeed = 0;
+    double totalDistance = 0;
+    double minX = results[0].x, maxX = results[0].x;
+    double minY = results[0].y, maxY = results[0].y;
+    
+    for (size_t i = 0; i < results.size(); ++i) {
+        const auto& state = results[i];
+        
+        double depth = std::abs(state.y);
+        double speed = std::sqrt(state.vx * state.vx + state.vy * state.vy);
+        
+        if (depth > maxDepth) maxDepth = depth;
+        if (speed > maxSpeed) maxSpeed = speed;
+        if (state.x < minX) minX = state.x;
+        if (state.x > maxX) maxX = state.x;
+        if (state.y < minY) minY = state.y;
+        if (state.y > maxY) maxY = state.y;
+        
+        if (i > 0) {
+            const auto& prev = results[i-1];
+            double distance = std::sqrt(std::pow(state.x - prev.x, 2) + std::pow(state.y - prev.y, 2));
+            totalDistance += distance;
+        }
+    }
+    
+    double finalSpeed = std::sqrt(finalState.vx * finalState.vx + finalState.vy * finalState.vy);
+    double finalAngleDeg = finalState.theta * 180.0 / M_PI;
+    
+    QString resultsText = QString(
+        "=== РЕЗУЛЬТАТЫ СИМУЛЯЦИИ АНПА ===\n\n"
+        "ОБЩАЯ ИНФОРМАЦИЯ:\n"
+        "  Длительность симуляции: %1 с\n"
+        "  Шаг времени: %2 с\n"
+        "  Количество точек данных: %3\n"
+        "  Общее время моделирования: %4 с\n\n"
+        "ФИНАЛЬНОЕ СОСТОЯНИЕ:\n"
+        "  Позиция: X=%5 м, Y=%6 м\n"
+        "  Скорость: Vx=%7 м/с, Vy=%8 м/с\n"
+        "  Угол: %9 рад (%10°)\n"
+        "  Угловая скорость: %11 рад/с\n"
+        "  Время: %12 с\n\n"
+        "СТАТИСТИКА ДВИЖЕНИЯ:\n"
+        "  Максимальная глубина: %13 м\n"
+        "  Максимальная скорость: %14 м/с\n"
+        "  Пройденное расстояние: %15 м\n"
+        "  Финальная скорость: %16 м/с\n"
+        "  Диапазон по X: %17 - %18 м\n"
+        "  Диапазон по Y: %19 - %20 м\n\n"
+        "ПАРАМЕТРЫ СИМУЛЯЦИИ:\n"
+        "  Масса: %21 кг\n"
+        "  Тяга: %22 Н\n"
+        "  Коэффициент подъемной силы: %23\n"
+        "  Демпфирование: Kx=%24, Ky=%25, Kθ=%26"
+    ).arg(m_params.duration, 0, 'f', 1)
+     .arg(m_params.dt, 0, 'f', 3)
+     .arg(results.size())
+     .arg(results.back().time, 0, 'f', 1)
+     .arg(finalState.x, 0, 'f', 3)
+     .arg(finalState.y, 0, 'f', 3)
+     .arg(finalState.vx, 0, 'f', 3)
+     .arg(finalState.vy, 0, 'f', 3)
+     .arg(finalState.theta, 0, 'f', 3)
+     .arg(finalAngleDeg, 0, 'f', 1)
+     .arg(finalState.omega, 0, 'f', 3)
+     .arg(finalState.time, 0, 'f', 1)
+     .arg(maxDepth, 0, 'f', 3)
+     .arg(maxSpeed, 0, 'f', 3)
+     .arg(totalDistance, 0, 'f', 3)
+     .arg(finalSpeed, 0, 'f', 3)
+     .arg(minX, 0, 'f', 3)
+     .arg(maxX, 0, 'f', 3)
+     .arg(minY, 0, 'f', 3)
+     .arg(maxY, 0, 'f', 3)
+     .arg(m_params.mass, 0, 'f', 2)
+     .arg(m_params.thrust, 0, 'f', 2)
+     .arg(m_params.lambda, 0, 'f', 2)
+     .arg(m_params.kx, 0, 'f', 1)
+     .arg(m_params.ky, 0, 'f', 1)
+     .arg(m_params.ktheta, 0, 'f', 1);
+    
+    return resultsText;
+}
+
+void SimulationThread::stopSimulation()
+{
+    m_stopRequested = true;
 }

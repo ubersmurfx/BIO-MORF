@@ -423,12 +423,14 @@ compiler_moc_header_make_all: moc_MainWindow.cpp moc_SimulationThread.cpp
 compiler_moc_header_clean:
 	-$(DEL_FILE) moc_MainWindow.cpp moc_SimulationThread.cpp
 moc_MainWindow.cpp: MainWindow.hpp \
+		simulation_parameters.hpp \
 		moc_predefs.h \
 		/usr/lib/qt5/bin/moc
 	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/gerzeg1/BIO-MORF/ws/src/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/gerzeg1/BIO-MORF/ws/src -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtCharts -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include MainWindow.hpp -o moc_MainWindow.cpp
 
 moc_SimulationThread.cpp: SimulationThread.hpp \
 		simulation/fish_simulation.hpp \
+		simulation_parameters.hpp \
 		moc_predefs.h \
 		/usr/lib/qt5/bin/moc
 	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/gerzeg1/BIO-MORF/ws/src/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/gerzeg1/BIO-MORF/ws/src -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtCharts -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include SimulationThread.hpp -o moc_SimulationThread.cpp
@@ -449,19 +451,23 @@ compiler_clean: compiler_moc_predefs_clean compiler_moc_header_clean
 
 ####### Compile
 
-main.o: main.cpp MainWindow.hpp
+main.o: main.cpp MainWindow.hpp \
+		simulation_parameters.hpp
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o main.cpp
 
 MainWindow.o: MainWindow.cpp MainWindow.hpp \
+		simulation_parameters.hpp \
 		SimulationThread.hpp \
 		simulation/fish_simulation.hpp
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o MainWindow.o MainWindow.cpp
 
 SimulationThread.o: SimulationThread.cpp SimulationThread.hpp \
-		simulation/fish_simulation.hpp
+		simulation/fish_simulation.hpp \
+		simulation_parameters.hpp
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o SimulationThread.o SimulationThread.cpp
 
-fish_simulation.o: simulation/fish_simulation.cpp simulation/fish_simulation.hpp
+fish_simulation.o: simulation/fish_simulation.cpp simulation/fish_simulation.hpp \
+		simulation_parameters.hpp
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o fish_simulation.o simulation/fish_simulation.cpp
 
 moc_MainWindow.o: moc_MainWindow.cpp 

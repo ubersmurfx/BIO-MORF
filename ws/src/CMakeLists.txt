@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(FishSimulationQt)
 
 # Поиск Qt5
-find_package(Qt5 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt5 REQUIRED COMPONENTS Core Widgets Charts)
 
 # Проверяем наличие Charts
 find_package(Qt5Charts QUIET)
