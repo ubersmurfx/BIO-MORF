@@ -20,6 +20,7 @@ FishTailSimulation::FishTailSimulation(const SimulationParameters& params)
     y_neutral = find_static_equilibrium_depth();
     check_initial_moment();
     print_parameters();
+    balance_moments();
 }
 
 void FishTailSimulation::print_parameters() const {
@@ -78,7 +79,7 @@ double FishTailSimulation::adaptive_archimedes_force(double y, double vy) const 
     }
     
     adaptive_v0 += correction;
-    adaptive_v0 = std::max(0.0025, std::min(0.0035, adaptive_v0));
+    adaptive_v0 = std::max(0.0029, std::min(0.0031, adaptive_v0));
     
     // std::cout << "ADAPTIVE_DEBUG: v0=" << adaptive_v0 << " correction=" << correction 
     //           << " y=" << y << " vy=" << vy << std::endl;
@@ -91,17 +92,12 @@ std::vector<double> FishTailSimulation::equations_of_motion(double t, const std:
     double vx = state[2], vy = state[3];
     double theta = state[4], omega = state[5];
     
-    double constrained_y = std::max(0.0, y);
-    
+    double constrained_y = std::max(0.0, std::min(y, 100.0));
+
     // вычисление сил
     double Ft = thrust_force(constrained_y, theta);
     double Fa = adaptive_archimedes_force(constrained_y, vy);
     double Fl = lift_force(vx);
-
-    // ограничение сил
-    Ft = std::max(-100.0, std::min(100.0, Ft));
-    Fa = std::max(0.0, std::min(1000.0, Fa));
-    Fl = std::max(0.0, std::min(1000.0, Fl));
 
     // Уравнения движения
     double ax = ((Ft * std::cos(theta)) - params.kx * vx * std::abs(vx)) / params.mass;
@@ -115,7 +111,12 @@ std::vector<double> FishTailSimulation::equations_of_motion(double t, const std:
     
     double alpha = (moment_archimedes + moment_gravity + moment_lift - 
                    params.ktheta * omega * std::abs(omega)) / params.inertia;
-    
+
+    std::cout << "CONTROL_DEBUG: y=" << constrained_y << " x " << x << " y " << y 
+        << ", w " << omega
+          << " theta " << theta 
+          << ", Ft=" << Ft << std::endl;
+
     y_curr = y;
 
     return {vx, vy, ax, ay, omega, alpha};
@@ -146,8 +147,20 @@ std::vector<double> FishTailSimulation::runge_kutta_4(double t, const std::vecto
     for (size_t i = 0; i < state.size(); ++i) {
         new_state[i] = state[i] + (dt / 6.0) * (k1[i] + 2*k2[i] + 2*k3[i] + k4[i]);
     }
-    
     return new_state;
+}
+
+void FishTailSimulation::balance_moments() {
+    double Fa = archimedes_force(y_neutral);
+    double Fg = params.mass * 9.81;
+    
+    // Подбираем ra так чтобы моменты уравновесились
+    double target_ra = -params.rmg * Fg / Fa;
+    std::cout << "Для баланса нужно ra = " << target_ra << std::endl;
+    
+    // Или подбираем rmg
+    double target_rmg = -params.ra * Fa / Fg;
+    std::cout << "Для баланса нужно rmg = " << target_rmg << std::endl;
 }
 
 std::vector<FishTailSimulation::State> FishTailSimulation::simulate(double duration, double dt, const State& initial_state) {

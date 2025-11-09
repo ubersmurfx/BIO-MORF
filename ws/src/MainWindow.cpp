@@ -358,9 +358,9 @@ QGroupBox* MainWindow::createRobotParametersGroup()
     thrustEdit = new QLineEdit("0.1");
     fYEdit = new QLineEdit("0.2");
     gEdit = new QLineEdit("9.81");
-    raEdit = new QLineEdit("0.05");
-    rmgEdit = new QLineEdit("-0.06");
-    rlEdit = new QLineEdit("-0.25");
+    raEdit = new QLineEdit("0.06");
+    rmgEdit = new QLineEdit("-0.05");
+    rlEdit = new QLineEdit("-0.1");
     kxEdit = new QLineEdit("2.0");
     kyEdit = new QLineEdit("1.0");
     kthetaEdit = new QLineEdit("5.0");

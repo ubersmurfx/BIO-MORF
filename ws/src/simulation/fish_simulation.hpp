@@ -26,7 +26,7 @@ public:
     // Конструкторы
     FishTailSimulation();
     FishTailSimulation(const SimulationParameters& params);
-    
+    void balance_moments();
     // Методы симуляции
     bool is_dynamically_stable(const State& state, double tolerance = 0.01) const;
     std::vector<double> equations_of_motion(double t, const std::vector<double>& state) const;

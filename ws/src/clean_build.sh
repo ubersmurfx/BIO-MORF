@@ -20,6 +20,7 @@ rm -f SimulationThread.o 2>/dev/null && echo "✅ Удален: SimulationThread
 rm -f moc_SimulationThread.o 2>/dev/null && echo "✅ Удален: moc_SimulationThread.o"
 rm -f moc_MainWindow.o 2>/dev/null && echo "✅ Удален: moc_MainWindow.o"
 rm -f MainWindow.o 2>/dev/null && echo "✅ Удален: MainWindow.o"
+rm -f .qmake.stash 2>/dev/null && echo "✅ Удален: .qmake.stash"
 
 
 echo "🎯 Удаление завершено!"
