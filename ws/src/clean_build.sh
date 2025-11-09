@@ -14,6 +14,12 @@ rm -f fish_simulation.o 2>/dev/null && echo "✅ Удален: fish_simulation.o
 rm -f FishSimulation 2>/dev/null && echo "✅ Удален: FishSimulation"
 rm -f FishSimulation 2>/dev/null && echo "✅ Удален: FishSimulation"
 rm -f FishSimulation.pro 2>/dev/null && echo "✅ Удален: FishSimulation.pro"
+rm -f main.o 2>/dev/null && echo "✅ Удален: main.o"
+rm -f -r .vscode 2>/dev/null && echo "✅ Удален: .vscode"
+rm -f SimulationThread.o 2>/dev/null && echo "✅ Удален: SimulationThread.o"
+rm -f moc_SimulationThread.o 2>/dev/null && echo "✅ Удален: moc_SimulationThread.o"
+rm -f moc_MainWindow.o 2>/dev/null && echo "✅ Удален: moc_MainWindow.o"
+rm -f MainWindow.o 2>/dev/null && echo "✅ Удален: MainWindow.o"
 
 
 echo "🎯 Удаление завершено!"

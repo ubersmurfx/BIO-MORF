@@ -1,5 +1,6 @@
 #include "simulation/fish_simulation.hpp"
 
+
 FishTailSimulation::State::State(double x, double y, double vx, double vy, 
                                 double theta, double omega, double t) 
     : x(x), y(y), vx(vx), vy(vy), theta(theta), omega(omega), time(t) {}
