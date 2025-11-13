@@ -13,7 +13,6 @@ FishTailSimulation::FishTailSimulation() : params(), adaptive_v0(params.v0) {
     print_parameters();
 }
 
-// Конструктор с параметрами
 FishTailSimulation::FishTailSimulation(const SimulationParameters& params) 
     : params(params), adaptive_v0(params.v0) {
     params.validate();

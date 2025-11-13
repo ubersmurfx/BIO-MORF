@@ -11,6 +11,7 @@ sudo apt install -y cmake build-essential g++
 sudo apt-get install gnuplot -y
 # Установить QT Charts
 sudo apt install libqt5charts5-dev
+sudo apt-get install gnuplot
 
 echo "✅ Зависимости установлены!"
 echo "🔨 Теперь можно запустить: ./build_sim.sh"
