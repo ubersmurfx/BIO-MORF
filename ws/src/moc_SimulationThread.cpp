@@ -23,7 +23,7 @@ QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_SimulationThread_t {
     QByteArrayData data[9];
-    char stringdata0[102];
+    char stringdata0[105];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -33,19 +33,20 @@ struct qt_meta_stringdata_SimulationThread_t {
 static const qt_meta_stringdata_SimulationThread_t qt_meta_stringdata_SimulationThread = {
     {
 QT_MOC_LITERAL(0, 0, 16), // "SimulationThread"
-QT_MOC_LITERAL(1, 17, 18), // "simulationFinished"
-QT_MOC_LITERAL(2, 36, 0), // ""
-QT_MOC_LITERAL(3, 37, 12), // "resultsReady"
-QT_MOC_LITERAL(4, 50, 7), // "results"
-QT_MOC_LITERAL(5, 58, 15), // "progressUpdated"
-QT_MOC_LITERAL(6, 74, 5), // "value"
-QT_MOC_LITERAL(7, 80, 15), // "simulationError"
-QT_MOC_LITERAL(8, 96, 5) // "error"
+QT_MOC_LITERAL(1, 17, 15), // "progressUpdated"
+QT_MOC_LITERAL(2, 33, 0), // ""
+QT_MOC_LITERAL(3, 34, 8), // "progress"
+QT_MOC_LITERAL(4, 43, 12), // "resultsReady"
+QT_MOC_LITERAL(5, 56, 7), // "results"
+QT_MOC_LITERAL(6, 64, 18), // "simulationFinished"
+QT_MOC_LITERAL(7, 83, 15), // "simulationError"
+QT_MOC_LITERAL(8, 99, 5) // "error"
 
     },
-    "SimulationThread\0simulationFinished\0"
-    "\0resultsReady\0results\0progressUpdated\0"
-    "value\0simulationError\0error"
+    "SimulationThread\0progressUpdated\0\0"
+    "progress\0resultsReady\0results\0"
+    "simulationFinished\0simulationError\0"
+    "error"
 };
 #undef QT_MOC_LITERAL
 
@@ -63,15 +64,15 @@ static const uint qt_meta_data_SimulationThread[] = {
        4,       // signalCount
 
  // signals: name, argc, parameters, tag, flags
-       1,    0,   34,    2, 0x06 /* Public */,
-       3,    1,   35,    2, 0x06 /* Public */,
-       5,    1,   38,    2, 0x06 /* Public */,
+       1,    1,   34,    2, 0x06 /* Public */,
+       4,    1,   37,    2, 0x06 /* Public */,
+       6,    0,   40,    2, 0x06 /* Public */,
        7,    1,   41,    2, 0x06 /* Public */,
 
  // signals: parameters
+    QMetaType::Void, QMetaType::Int,    3,
+    QMetaType::Void, QMetaType::QString,    5,
     QMetaType::Void,
-    QMetaType::Void, QMetaType::QString,    4,
-    QMetaType::Void, QMetaType::Int,    6,
     QMetaType::Void, QMetaType::QString,    8,
 
        0        // eod
@@ -83,17 +84,17 @@ void SimulationThread::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int
         auto *_t = static_cast<SimulationThread *>(_o);
         (void)_t;
         switch (_id) {
-        case 0: _t->simulationFinished(); break;
+        case 0: _t->progressUpdated((*reinterpret_cast< int(*)>(_a[1]))); break;
         case 1: _t->resultsReady((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 2: _t->progressUpdated((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 2: _t->simulationFinished(); break;
         case 3: _t->simulationError((*reinterpret_cast< const QString(*)>(_a[1]))); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
         int *result = reinterpret_cast<int *>(_a[0]);
         {
-            using _t = void (SimulationThread::*)();
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&SimulationThread::simulationFinished)) {
+            using _t = void (SimulationThread::*)(int );
+            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&SimulationThread::progressUpdated)) {
                 *result = 0;
                 return;
             }
@@ -106,8 +107,8 @@ void SimulationThread::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int
             }
         }
         {
-            using _t = void (SimulationThread::*)(int );
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&SimulationThread::progressUpdated)) {
+            using _t = void (SimulationThread::*)();
+            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&SimulationThread::simulationFinished)) {
                 *result = 2;
                 return;
             }
@@ -163,9 +164,10 @@ int SimulationThread::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 }
 
 // SIGNAL 0
-void SimulationThread::simulationFinished()
+void SimulationThread::progressUpdated(int _t1)
 {
-    QMetaObject::activate(this, &staticMetaObject, 0, nullptr);
+    void *_a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t1))) };
+    QMetaObject::activate(this, &staticMetaObject, 0, _a);
 }
 
 // SIGNAL 1
@@ -176,10 +178,9 @@ void SimulationThread::resultsReady(const QString & _t1)
 }
 
 // SIGNAL 2
-void SimulationThread::progressUpdated(int _t1)
+void SimulationThread::simulationFinished()
 {
-    void *_a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t1))) };
-    QMetaObject::activate(this, &staticMetaObject, 2, _a);
+    QMetaObject::activate(this, &staticMetaObject, 2, nullptr);
 }
 
 // SIGNAL 3

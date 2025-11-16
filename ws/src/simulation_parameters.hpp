@@ -4,21 +4,21 @@
 #include <QMetaType>
 
 struct SimulationParameters {
-    double mass;
-    double inertia;
-    double lambda;
-    double thrust;
+    double mass; // mass
+    double inertia; // Pitch moment of intertia
+    double lambda; // lift coeff
+    double thrust; 
     double fY;
     double g;
-    double ra;
+    double ra; // offset bladder
     double rmg;
-    double rl;
+    double rl; // lift force offset
     double kx;
     double ky;
-    double ktheta;
+    double ktheta; // structal pitch stiffness
     double yeq;
     double u0;
-    double v0;
+    double v0; 
     double rho;
     double p0;
     double initX;

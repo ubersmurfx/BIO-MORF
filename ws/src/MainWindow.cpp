@@ -74,7 +74,7 @@ QGroupBox* MainWindow::createInitialConditionsGroup()
     
     // Create input fields with default values
     xEdit = new QLineEdit("0.0");
-    yEdit = new QLineEdit("0.4");
+    yEdit = new QLineEdit("2.78287");
     vxEdit = new QLineEdit("0.2");
     vyEdit = new QLineEdit("0.0");
     thetaEdit = new QLineEdit("0.0");
@@ -104,7 +104,7 @@ QGroupBox* MainWindow::createSimulationParametersGroup()
     QGroupBox *group = new QGroupBox("Параметры симуляции");
     QGridLayout *layout = new QGridLayout;
     
-    durationEdit = new QLineEdit("200.0");
+    durationEdit = new QLineEdit("20.0");
     dtEdit = new QLineEdit("0.1");
     
     layout->addWidget(new QLabel("Длительность (с):"), 0, 0);
@@ -225,7 +225,7 @@ void MainWindow::refreshPlot()
 
 void MainWindow::updatePlotImage()
 {
-    QString imagePath = "trajectory_plots.png";
+    QString imagePath = "stability_analysis.png";
     
     if (QFile::exists(imagePath)) {
         QPixmap pixmap(imagePath);
@@ -239,7 +239,7 @@ void MainWindow::updatePlotImage()
             plotLabel->setText("Ошибка загрузки изображения");
         }
     } else {
-        plotLabel->setText("Файл trajectory_plots.png не найден\nЗапустите симуляцию для генерации графика");
+        plotLabel->setText("Файл stability_analysis.png не найден\nЗапустите симуляцию для генерации графика");
     }
 }
 
@@ -352,71 +352,94 @@ QGroupBox* MainWindow::createRobotParametersGroup()
     QGridLayout *layout = new QGridLayout;
     
     // Создаем поля ввода
-    massEdit = new QLineEdit("3.0");
-    inertiaEdit = new QLineEdit("0.5");
-    lambdaEdit = new QLineEdit("1.5");
-    thrustEdit = new QLineEdit("0.1");
-    fYEdit = new QLineEdit("0.2");
+    massEdit = new QLineEdit("1.0"); // 1 кг (из статьи)
+    inertiaEdit = new QLineEdit("1.0"); // 1 кг·м² (из статьи) - исправлено с 0.5 на 1.0
+    lambdaEdit = new QLineEdit("1.0"); // K = 1 кг/м (из статьи) - исправлено с 1.5 на 1.0
     gEdit = new QLineEdit("9.81");
-    raEdit = new QLineEdit("0.06");
-    rmgEdit = new QLineEdit("-0.05");
-    rlEdit = new QLineEdit("-0.1");
-    kxEdit = new QLineEdit("2.0");
-    kyEdit = new QLineEdit("1.0");
-    kthetaEdit = new QLineEdit("5.0");
-    yeqEdit = new QLineEdit("0.344292");
-    u0Edit = new QLineEdit("1.0");
-    v0Edit = new QLineEdit("0.00305");
-    rhoEdit = new QLineEdit("1000.0");
-    p0Edit = new QLineEdit("101325.0");
-    
+    raEdit = new QLineEdit("-2.9"); // rA = -3 м (хвостовой пузырь) - из статьи
+    rlEdit = new QLineEdit("-2.1"); // rL = -2 м (хвостовые плавники) - из статьи
+    kthetaEdit = new QLineEdit("5.0"); // kθ = 5 Н·м/рад - из статьи
+    u0Edit = new QLineEdit("3.0"); // Начальная скорость U (рекомендуется 2.0 для устойчивости)
+    v0Edit = new QLineEdit("0.000727"); // V0 = 0.003 м³ (номинальный объем пузыря)
+    rhoEdit = new QLineEdit("1000.0"); // ρw = 1000 кг/м³ - из статьи
+    p0Edit = new QLineEdit("100000.0"); // p0 = 10⁵ Па - из статьи
+
+    rmgEdit = new QLineEdit("0.0"); // В статье не используется, т.к. центр масс считается в начале координат
+    yeqEdit = new QLineEdit("0.0"); // В статье равновесие на z=0
+    fYEdit = new QLineEdit("0.0"); // В статье этот параметр не используется
+    kxEdit = new QLineEdit("0.0"); // В статье демпфирование в z-уравнении не добавляется
+    kyEdit = new QLineEdit("0.0"); // В статье демпфирование в z-уравнении не добавляется
+    thrustEdit = new QLineEdit("0.0"); // В статье тяга не используется, т.к. скорость постоянная
+
     int row = 0;
-    
-    // Основные параметры
-    layout->addWidget(new QLabel("Масса (кг):"), row, 0);
+    // Основные параметры из статьи
+    layout->addWidget(new QLabel("Масса m (кг):"), row, 0);
     layout->addWidget(massEdit, row++, 1);
-    layout->addWidget(new QLabel("Момент инерции:"), row, 0);
+    
+    layout->addWidget(new QLabel("Момент инерции J (кг·м²):"), row, 0);
     layout->addWidget(inertiaEdit, row++, 1);
-    layout->addWidget(new QLabel("Коэф. подъемной силы:"), row, 0);
+    
+    layout->addWidget(new QLabel("Скорость U (м/с):"), row, 0);
+    layout->addWidget(u0Edit, row++, 1);
+    
+    layout->addWidget(new QLabel("Коэф. подъемной силы K (кг/м):"), row, 0);
     layout->addWidget(lambdaEdit, row++, 1);
     
-    // Параметры тяги
-    layout->addWidget(new QLabel("Номинальная тяга (Н):"), row, 0);
-    layout->addWidget(thrustEdit, row++, 1);
-    layout->addWidget(new QLabel("Коэф. Fy:"), row, 0);
-    layout->addWidget(fYEdit, row++, 1);
-    layout->addWidget(new QLabel("Коэф. G:"), row, 0);
-    layout->addWidget(gEdit, row++, 1);
+    layout->addWidget(new QLabel("Жесткость плавучести k_b (Н/м):"), row, 0);
+    // k_b вычисляется автоматически из других параметров
+    QLineEdit* kbInfo = new QLineEdit("0.5 (auto)");
+    kbInfo->setReadOnly(true);
+    kbInfo->setToolTip("k_b = (ρ²g²V₀)/(κp₀) - вычисляется автоматически");
+    layout->addWidget(kbInfo, row++, 1);
     
-    // Плечи сил
-    layout->addWidget(new QLabel("Плечо Архимеда (м):"), row, 0);
+    // Геометрические параметры из статьи
+    layout->addWidget(new QLabel("Смещение плавучести rA (м):"), row, 0);
     layout->addWidget(raEdit, row++, 1);
-    layout->addWidget(new QLabel("Плечо тяжести (м):"), row, 0);
-    layout->addWidget(rmgEdit, row++, 1);
-    layout->addWidget(new QLabel("Плечо подъемной силы (м):"), row, 0);
+    
+    layout->addWidget(new QLabel("Смещение подъемной силы rL (м):"), row, 0);
     layout->addWidget(rlEdit, row++, 1);
     
-    // Демпфирование
-    layout->addWidget(new QLabel("Kx (гориз.):"), row, 0);
-    layout->addWidget(kxEdit, row++, 1);
-    layout->addWidget(new QLabel("Ky (вертик.):"), row, 0);
-    layout->addWidget(kyEdit, row++, 1);
-    layout->addWidget(new QLabel("Kθ (угловое):"), row, 0);
+    layout->addWidget(new QLabel("Структурная жесткость kθ (Н·м/рад):"), row, 0);
     layout->addWidget(kthetaEdit, row++, 1);
     
-    // Равновесные параметры
-    layout->addWidget(new QLabel("Равновесная глубина (м):"), row, 0);
-    layout->addWidget(yeqEdit, row++, 1);
-    layout->addWidget(new QLabel("Равновесная скорость (м/с):"), row, 0);
-    layout->addWidget(u0Edit, row++, 1);
-    layout->addWidget(new QLabel("Начальный объем (м³):"), row, 0);
+    // Параметры плавательного пузыря из статьи
+    layout->addWidget(new QLabel("Объем пузыря V₀ (м³):"), row, 0);
     layout->addWidget(v0Edit, row++, 1);
     
-    // Параметры среды
-    layout->addWidget(new QLabel("Плотность воды (кг/м³):"), row, 0);
+    layout->addWidget(new QLabel("Плотность воды ρ (кг/м³):"), row, 0);
     layout->addWidget(rhoEdit, row++, 1);
-    layout->addWidget(new QLabel("Атмосферное давление (Па):"), row, 0);
+    
+    layout->addWidget(new QLabel("Давление p₀ (Па):"), row, 0);
     layout->addWidget(p0Edit, row++, 1);
+    
+    // Дополнительные параметры (можно скрыть или оставить для расширенных настроек)
+    QGroupBox *advancedGroup = new QGroupBox("Дополнительные параметры");
+    QGridLayout *advancedLayout = new QGridLayout;
+    
+    int advRow = 0;
+    advancedLayout->addWidget(new QLabel("Тяга (Н):"), advRow, 0);
+    advancedLayout->addWidget(thrustEdit, advRow++, 1);
+    
+    advancedLayout->addWidget(new QLabel("Коэффициент Fy:"), advRow, 0);
+    advancedLayout->addWidget(fYEdit, advRow++, 1);
+    
+    advancedLayout->addWidget(new QLabel("Смещение тяжести (м):"), advRow, 0);
+    advancedLayout->addWidget(rmgEdit, advRow++, 1);
+    
+    advancedLayout->addWidget(new QLabel("Демпфирование Kx:"), advRow, 0);
+    advancedLayout->addWidget(kxEdit, advRow++, 1);
+    
+    advancedLayout->addWidget(new QLabel("Демпфирование Ky:"), advRow, 0);
+    advancedLayout->addWidget(kyEdit, advRow++, 1);
+    
+    advancedLayout->addWidget(new QLabel("Равновесная глубина (м):"), advRow, 0);
+    advancedLayout->addWidget(yeqEdit, advRow++, 1);
+    
+    advancedGroup->setLayout(advancedLayout);
+    advancedGroup->setCheckable(true);
+    advancedGroup->setChecked(false); // Свернуто по умолчанию
+    
+    layout->addWidget(advancedGroup, row++, 0, 1, 2);
     
     group->setLayout(layout);
     return group;
