@@ -56,7 +56,6 @@ public:
         bool can_stabilize_from_below; // Можно стабилизироваться при старте снизу
         double min_depth_for_stabilization; // Минимальная глубина для достижения динамического равновесия
     };
-    EquilibriumAnalysis analyze_equilibrium_scenarios() const;
     double find_dynamic_equilibrium_depth() const;
 
 private:

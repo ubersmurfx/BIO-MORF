@@ -60,7 +60,7 @@ std::vector<double> FishTailSimulation::equations_of_motion(double t, const std:
     
     // Автоматически вычисляем статическое равновесие
     double y_static = (params.rho * params.v0 * params.p0 / params.mass - params.p0) / (params.rho * params.g);
-    double z_equilibrium = -y_static; // z = -y
+    double z_equilibrium = y_static;
     double z_relative = z - z_equilibrium;
     
     // Остальной код без изменений...
@@ -68,6 +68,9 @@ std::vector<double> FishTailSimulation::equations_of_motion(double t, const std:
     double k_b = calculate_buoyancy_stiffness();
     double K = params.lambda;
     
+    std::cout << "t=" << t << " z=" << z << " z_relative=" << z_relative 
+              << " z_equilibrium=" << z_equilibrium << std::endl;
+
     double z_double_dot = (-K * U * zdot + 
                           k_b * z_relative + 
                           (k_b * params.ra + K * U * U) * theta) / params.mass;
@@ -463,59 +466,49 @@ double FishTailSimulation::calculate_neutral_buoyancy_depth() const {
     return y_neutral;
 }
 
-
-FishTailSimulation::EquilibriumAnalysis FishTailSimulation::analyze_equilibrium_scenarios() const {
-    EquilibriumAnalysis analysis;
-    
-    // 1. Глубина статического равновесия
-    analysis.y_static = (params.rho * params.v0 * params.p0 / params.mass - params.p0) / (params.rho * params.g);
-    
-    // 2. Глубина динамического равновесия (решаем численно)
-    analysis.y_dynamic = find_dynamic_equilibrium_depth();
-    
-    // 3. Анализ сценариев
-    analysis.can_stabilize_from_above = analysis.y_dynamic > analysis.y_static;
-    analysis.can_stabilize_from_below = false; // По гипотезе - невозможно
-    
-    // 4. Минимальная глубина для стабилизации
-    analysis.min_depth_for_stabilization = analysis.y_static;
-    
-    return analysis;
-}
-
 double FishTailSimulation::find_dynamic_equilibrium_depth() const {
-    // Правильное уравнение: m·g = ρ·g·V₀·p₀/(p₀ + ρ·g·y) + K·U²·α
-    // Нужно учитывать угол атаки α, который зависит от глубины!
-    
     double U = params.u0;
     double K = params.lambda;
     
-    // Решаем численно: находим y, где сумма сил = 0
-    double y_left = -10.0, y_right = 10.0;
+    // Сначала находим статическое равновесие (точку нулевой плавучести)
+    double y_static = (params.rho * params.v0 * params.p0 / params.mass - params.p0) / (params.rho * params.g);
+    
+    // Для динамического равновесия ищем решение уравнения:
+    // m·g = ρ·g·V₀·p₀/(p₀ + ρ·g·y) + K·U²·α(y)
+    // где α(y) = -k_b·(y - y_static)/(k_b·ra + K·U²)
+    
+    double k_b = calculate_buoyancy_stiffness();
+    
+    // Диапазон поиска: от поверхности до глубокой воды
+    double y_left = -10.0;  // Выше статической точки
+    double y_right = 10.0;  // Ниже статической точки
     
     for (int i = 0; i < 50; ++i) {
         double y_mid = (y_left + y_right) / 2.0;
         
         // Выталкивающая сила на глубине y_mid
         double Fa = params.rho * params.g * params.v0 * (params.p0 / (params.p0 + params.rho * params.g * y_mid));
-
-        double k_b = calculate_buoyancy_stiffness();
-        double target_depth = 0.4; // Желаемая глубина стабилизации
-        double theta_equilibrium = -k_b * (y_mid - target_depth) / (k_b * params.ra + K * U * U);
         
-        double Fl = K * U * U * theta_equilibrium;
+        // Угол атаки для равновесия (из условия баланса моментов)
+        double theta_eq = -k_b * (y_mid - y_static) / (k_b * params.ra + K * U * U);
         
-        // Суммарная сила
+        // Подъемная сила от хвоста
+        double Fl = K * U * U * theta_eq;
+        
+        // Суммарная сила должна быть равна 0 в равновесии
         double total_force = Fa + Fl - params.mass * params.g;
         
-        if (std::abs(total_force) < 1e-6) {
+        if (std::abs(total_force) < 1e-8) {
             return y_mid;
         }
         
-        if (total_force < 0) {
-            y_left = y_mid; // Слишком много веса - увеличиваем глубину
+        // Логика бинарного поиска:
+        if (total_force > 0) {
+            // Слишком много плавучести + подъемной силы - нужно погрузиться глубже
+            y_left = y_mid;
         } else {
-            y_right = y_mid; // Слишком много плавучести - уменьшаем глубину
+            // Слишком мало подъемной силы - нужно всплыть
+            y_right = y_mid;
         }
     }
     
